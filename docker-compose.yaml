@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - bankrpc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  bankrpc:
+    build: .
+    ports:
+      - "50051:50051"
+      - "8501:8501"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - REDIS_HOST=redis
+    networks:
+      - bankrpc-network
+
+networks:
+  bankrpc-network:
+    driver: bridge
