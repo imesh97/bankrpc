@@ -4,13 +4,15 @@ import grpc
 import streamlit as st
 
 def main():
-    st.title("🏦 bankRPC — Distributed Banking")
+    """Run the Streamlit web interface"""
+
+    st.title("🏦 bankRPC — Distributed Banking")  # title and description
     st.markdown("Connect and interact with the [gRPC](https://grpc.io/) Banking Service. Powered by [Redis](https://redis.io/). Developed by [Nimsitha](https://www.nimsitha.com).")
 
-    if 'client' not in st.session_state:
+    if 'client' not in st.session_state:  # initializes new client with empty session state
         st.session_state.client = None
 
-    with st.sidebar:
+    with st.sidebar:  # Create sidebar to connect to server
         st.header("Service Connection")
         server_address = st.text_input(
             "Server Address", 
@@ -29,7 +31,7 @@ def main():
             except Exception as e:
                 st.error(f"Connection failed: {str(e)}")
 
-    if st.session_state.client:
+    if st.session_state.client:  # If client is connected -> show management UI
         st.header("Bank Account Management")
         operation = st.selectbox(
             "Choose Operation",
@@ -37,6 +39,7 @@ def main():
              "Calculate Interest", "Check Balance"]
         )
 
+        # Choosing between different operations
         if operation == "Create Account":
             with st.form("create_account"):
                 account_id = st.text_input("Account ID")
@@ -101,7 +104,7 @@ def main():
                     else:
                         st.metric("Current Balance", f"${result:.2f}")
 
-    else:
+    else:  # Must connect to server before using management UI
         st.warning("Please connect to the bank service using the sidebar first.")
 
 if __name__ == "__main__":
