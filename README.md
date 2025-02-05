@@ -2,6 +2,11 @@
 
 A distributed banking application built using gRPC and Python, with Redis for data persistence. This system includes CORE banking operations such as account creation, deposits, withdrawals, and interest calculations, along with data consistency and concurrent transaction handling.
 
+## Demo
+
+- Deployed with Docker and AWS EC2.
+- To view the web interface demo, click [here](http://ec2-3-144-116-12.us-east-2.compute.amazonaws.com:8501/).
+
 ## Features
 
 - Account creation (savings/checkings)
