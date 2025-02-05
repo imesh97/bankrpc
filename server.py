@@ -5,6 +5,7 @@ By: Imesh Nimsitha
 Server.py Implementation
 """
 
+from os import getenv
 import bank_pb2_grpc
 import bank_pb2
 import redis
@@ -17,7 +18,7 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
 
     def __init__(self):
         """Initialize Redis connection"""
-        self.redis = redis.Redis(host='localhost', port=6379, db=0)
+        self.redis = redis.Redis(getenv("REDIS_HOST", "localhost"), port=6379, db=0)
         self.MAX_RETRIES = 3  # No infinite retries (deadlock prevention)
 
     def _get_account(self, account_id):
