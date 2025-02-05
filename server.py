@@ -18,6 +18,7 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
     def __init__(self):
         """Initialize Redis connection"""
         self.redis = redis.Redis(host='localhost', port=6379, db=0)
+        self.MAX_RETRIES = 3  # No infinite retries (deadlock prevention)
 
     def _get_account(self, account_id):
         """Helper function for getting JSON account data from Redis"""
@@ -30,17 +31,31 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
 
     def CreateAccount(self, request, context):
         """Creates a new account"""
-        if self.redis.exists(request.account_id):  # Check if account already exists
-            context.set_code(grpc.StatusCode.ALREADY_EXISTS)
-            context.set_details('Account already exists.')
-            return bank_pb2.AccountResponse()
+        retries = 0
+        while retries < self.MAX_RETRIES:  # Prevents optimistic locking
+            try:
+                with self.redis.pipeline() as pipe:
+                    pipe.watch(request.account_id)
+                    if self.redis.exists(request.account_id):  # Check if account already exists
+                        context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+                        context.set_details('Account already exists.')
+                        return bank_pb2.AccountResponse()
 
-        data = {  # New account data
-            "account_type": request.account_type,
-            "balance": 0.0
-        }
+                    data = {  # New account data
+                        "account_type": request.account_type,
+                        "balance": 0.0
+                    }
+                    self._set_account(request.account_id, data)
 
-        return bank_pb2.AccountResponse(account_id=request.account_id,message="Account created.")
+                    return bank_pb2.AccountResponse(account_id=request.account_id,message="Account created.")
+            
+            except redis.WatchError:
+                retries += 1
+                continue
+        
+        context.set_code(grpc.StatusCode.ABORTED)
+        context.set_details('Failed to create account after multiple retries.')
+        return bank_pb2.AccountResponse()
 
     def GetBalance(self, request, context):
         """Retrieves the balance for the account"""
@@ -59,9 +74,10 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
             context.set_details('Transaction amount must be positive.')
             return bank_pb2.TransactionResponse()
 
-        with self.redis.pipeline() as pipe:
-            while True:
-                try:
+        retries = 0
+        while retries < self.MAX_RETRIES:
+            try:
+                with self.redis.pipeline() as pipe:
                     pipe.watch(request.account_id)  # Watch for account data changes
                     data = self._get_account(request.account_id)
                     if not data:  # Check if account exists
@@ -74,8 +90,14 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()  # Execute the transaction
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Deposit successful.")
-                except redis.WatchError:  # Handle concurrent updates
-                    continue
+            
+            except redis.WatchError:  # Handle concurrent updates
+                retries += 1
+                continue
+        
+        context.set_code(grpc.StatusCode.ABORTED)
+        context.set_details('Failed to update account after multiple retries.')
+        return bank_pb2.TransactionResponse()
     
     def Withdraw(self, request, context):
         """Withdraws the amount from the account"""
@@ -84,9 +106,10 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
             context.set_details('Transaction amount must be positive.')
             return bank_pb2.TransactionResponse()
         
-        with self.redis.pipeline() as pipe:
-            while True:
-                try:
+        retries = 0
+        while retries < self.MAX_RETRIES:
+            try:
+                with self.redis.pipeline() as pipe:
                     pipe.watch(request.account_id)
                     data = self._get_account(request.account_id)
                     if not data:
@@ -104,8 +127,14 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Withdraw successful.")
-                except redis.WatchError:
-                    continue
+            
+            except redis.WatchError:
+                retries += 1
+                continue
+        
+        context.set_code(grpc.StatusCode.ABORTED)
+        context.set_details('Failed to update account after multiple retries.')
+        return bank_pb2.TransactionResponse()
     
     def CalculateInterest(self, request, context):
         """Calculates the interest on the account"""
@@ -114,9 +143,10 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
             context.set_details('Annual interest rate must be a positive value.')
             return bank_pb2.TransactionResponse()
         
-        with self.redis.pipeline() as pipe:
-            while True:
-                try:
+        retries = 0
+        while retries < self.MAX_RETRIES:
+            try:
+                with self.redis.pipeline() as pipe:
                     pipe.watch(request.account_id)
                     data = self._get_account(request.account_id)
                     if not data:
@@ -129,8 +159,15 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Interest calculated and deposited.")
-                except redis.WatchError:
-                    continue
+            
+            except redis.WatchError:
+                retries += 1
+                continue
+        
+        context.set_code(grpc.StatusCode.ABORTED)
+        context.set_details('Failed to update account after multiple retries.')
+        return bank_pb2.TransactionResponse()
+        
 
 def serve():
     """Starts the gRPC server"""
