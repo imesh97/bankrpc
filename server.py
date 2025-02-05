@@ -39,7 +39,6 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
             "account_type": request.account_type,
             "balance": 0.0
         }
-        self._set_account(request.account_id, data)
 
         return bank_pb2.AccountResponse(account_id=request.account_id,message="Account created.")
 
@@ -74,7 +73,6 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.multi()  # Start transaction
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()  # Execute the transaction
-                    self._set_account(request.account_id, data)
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Deposit successful.")
                 except redis.WatchError:  # Handle concurrent updates
                     continue
@@ -105,7 +103,6 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.multi()  # Transaction occurs
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()
-                    self._set_account(request.account_id, data)
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Withdraw successful.")
                 except redis.WatchError:
                     continue
@@ -131,7 +128,6 @@ class BankService(bank_pb2_grpc.BankServiceServicer):
                     pipe.multi()  # Transaction occurs
                     pipe.set(request.account_id, json.dumps(data))
                     pipe.execute()
-                    self._set_account(request.account_id, data)
                     return bank_pb2.TransactionResponse(account_id=request.account_id, balance=data['balance'], message="Interest calculated and deposited.")
                 except redis.WatchError:
                     continue
