@@ -40,7 +40,7 @@ Download and install Redis from [Redis Windows Downloads](https://github.com/mic
 
 ## Dependency Installation
 
-3. Install the Python dependencies:
+Install the Python dependencies:
 
 ```bash
 pip install grpcio grpcio-tools redis streamlit
