@@ -1,6 +1,6 @@
 # bankRPC — Distributed Banking
 
-A distributed banking application built using gRPC and Python, with Redis for data persistence. This system includes CORE banking operations such as account creation, deposits, withdrawals, and interest calculations, along with data consistency and concurrent transaction handling.
+A distributed banking application built using gRPC and Python, with Redis for data persistence. This system includes CORE banking operations such as account creation, deposits, withdrawals, and interest calculations, along with data consistency and concurrent transaction handling. Made for the Scalable and Reliable Distributed Systems course at Western University.
 
 ## Demo
 
