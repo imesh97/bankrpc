@@ -1,3 +1,10 @@
+"""
+bankRPC - Distributed Banking
+By: Imesh Nimsitha
+2025/02/05
+Client_ui.py Web Interface Implementation
+"""
+
 import bank_pb2_grpc
 from client import BankClient
 import grpc
